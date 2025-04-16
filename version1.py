@@ -7,36 +7,6 @@ import glob
 import csv
 import time
 
-def load_training_data(training_dir):
-    """
-    加载训练数据，返回特征矩阵和标签
-    """
-    print("正在加载训练数据...")
-    features = []
-    labels = []
-    
-    # 获取所有类别目录
-    class_dirs = [d for d in os.listdir(training_dir) if os.path.isdir(os.path.join(training_dir, d)) and not d.startswith('__')]
-    
-    for class_name in class_dirs:
-        class_path = os.path.join(training_dir, class_name)
-        if not os.path.isdir(class_path):
-            continue
-            
-        print(f"处理类别: {class_name}")
-        # 获取该类别下的所有图像
-        image_files = glob.glob(os.path.join(class_path, "*.jpg"))
-        
-        for img_file in image_files:
-            # 加载图像并转换为灰度图
-            img = Image.open(img_file).convert('L')
-            # 创建tiny image特征
-            feature = create_tiny_image(img)
-            features.append(feature)
-            labels.append(class_name)
-    
-    return np.array(features), np.array(labels)
-
 def create_tiny_image(img, size=16):
     """
     创建tiny image特征
@@ -70,6 +40,36 @@ def create_tiny_image(img, size=16):
     
     return img_array
 
+def load_training_data(training_dir):
+    """
+    加载训练数据，返回特征矩阵和标签
+    """
+    print("正在加载训练数据...")
+    features = []
+    labels = []
+    
+    # 获取所有类别目录
+    class_dirs = [d for d in os.listdir(training_dir) if os.path.isdir(os.path.join(training_dir, d)) and not d.startswith('__')]
+    
+    for class_name in class_dirs:
+        class_path = os.path.join(training_dir, class_name)
+        if not os.path.isdir(class_path):
+            continue
+            
+        print(f"处理类别: {class_name}")
+        # 获取该类别下的所有图像
+        image_files = glob.glob(os.path.join(class_path, "*.jpg"))
+        
+        for img_file in image_files:
+            # 加载图像
+            img = Image.open(img_file)
+            # 创建tiny image特征
+            feature = create_tiny_image(img)
+            features.append(feature)
+            labels.append(class_name)
+    
+    return np.array(features), np.array(labels)
+
 def load_test_data(test_dir):
     """
     加载测试数据，返回特征矩阵和图像文件名
@@ -82,8 +82,8 @@ def load_test_data(test_dir):
     test_images = glob.glob(os.path.join(test_dir, "*.jpg"))
     
     for img_file in test_images:
-        # 加载图像并转换为灰度图
-        img = Image.open(img_file).convert('L')
+        # 加载图像
+        img = Image.open(img_file)
         # 创建tiny image特征
         feature = create_tiny_image(img)
         features.append(feature)

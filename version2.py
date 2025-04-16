@@ -13,10 +13,6 @@ def extract_patches(img, patch_size=8, stride=4):
     """
     从图像中密集采样像素块
     """
-    # 转换为灰度图
-    if img.mode != 'L':
-        img = img.convert('L')
-    
     # 转换为numpy数组
     img_array = np.array(img)
     

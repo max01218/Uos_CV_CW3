@@ -14,10 +14,6 @@ def extract_dense_sift(img, step=8, scales=[1.0, 0.75, 0.5]):
     """
     提取密集SIFT特征
     """
-    # 转换为灰度图
-    if img.mode != 'L':
-        img = img.convert('L')
-    
     # 转换为numpy数组
     img_array = np.array(img)
     
