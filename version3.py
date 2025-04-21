@@ -85,11 +85,13 @@ def build_vocabulary(training_dir, num_clusters=500, max_patches_per_image=100):
         
         # 使用K-Means聚类
         print(f"使用K-Means聚类 {num_clusters} 个视觉词...")
-        kmeans = cv2.KMeans_create(num_clusters, cv2.KMEANS_PP_CENTERS)
-        kmeans.train(all_descriptors.astype(np.float32), cv2.TERM_CRITERIA_MAX_ITER, 100)
-        
-        # 保存词汇
-        vocabulary = kmeans.get_centers()
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+        _, labels, vocabulary = cv2.kmeans(all_descriptors.astype(np.float32), 
+                                         num_clusters, 
+                                         None, 
+                                         criteria, 
+                                         10, 
+                                         cv2.KMEANS_PP_CENTERS)
         
         return vocabulary
     else:
@@ -107,10 +109,12 @@ def extract_bow_features(img, vocabulary, step=8, scales=[1.0, 0.75, 0.5]):
         # 如果没有找到描述符，返回零向量
         return np.zeros(len(vocabulary))
     
-    # 将每个描述符映射到最近的视觉词
-    kmeans = cv2.KMeans_create()
-    kmeans.set_centers(vocabulary.astype(np.float32))
-    _, labels, _ = kmeans.predict(descriptors.astype(np.float32))
+    # 计算每个描述符到词汇表中所有视觉词的距离
+    distances = np.zeros((len(descriptors), len(vocabulary)))
+    for i, desc in enumerate(descriptors):
+        distances[i] = np.linalg.norm(vocabulary - desc, axis=1)
+    # 找到最近的视觉词
+    labels = np.argmin(distances, axis=1)
     
     # 计算视觉词袋特征（直方图）
     hist = np.zeros(len(vocabulary))
