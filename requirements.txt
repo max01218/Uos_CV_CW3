@@ -1,5 +1,8 @@
-numpy==1.24.3
-Pillow==9.5.0
-scikit-learn==1.2.2
-tqdm==4.65.0
-opencv-python==4.7.0.72 
+numpy>=1.24.3
+Pillow>=9.5.0
+scikit-learn>=1.2.2
+tqdm>=4.65.0
+opencv-python>=4.7.0.72
+faiss-cpu>=1.7.4
+joblib>=1.2.0
+matplotlib>=3.7.1 
