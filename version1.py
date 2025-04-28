@@ -78,8 +78,9 @@ def load_test_data(test_dir):
     features = []
     image_files = []
     
-    # 获取所有测试图像
+    # 获取所有测试图像并按数字顺序排序
     test_images = glob.glob(os.path.join(test_dir, "*.jpg"))
+    test_images = sorted(test_images, key=lambda x: float(os.path.basename(x).split('.')[0]))  # 按数字大小排序
     
     for img_file in test_images:
         # 加载图像
@@ -108,9 +109,12 @@ def predict_and_save(classifier, test_features, test_files, output_file):
     print("对测试数据进行预测...")
     predictions = classifier.predict(test_features)
     
-    # 保存预测结果到TXT文件
+    # 保存预测结果到TXT文件，确保按照文件名数字顺序排序
+    results = list(zip(test_files, predictions))
+    results.sort(key=lambda x: float(x[0].split('.')[0]))  # 按文件名中的数字排序
+    
     with open(output_file, 'w') as f:
-        for img_file, pred_class in zip(test_files, predictions):
+        for img_file, pred_class in results:
             f.write(f"{img_file} {pred_class}\n")
     
     print(f"预测结果已保存到 {output_file}")
