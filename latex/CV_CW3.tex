@@ -1,0 +1,122 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CVPR‑style Report – Function‑centric Pipeline Description
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+% ---- CVPR/IEEE packages ----
+\usepackage{cvpr}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ---- Misc packages ----
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks,breaklinks=true,bookmarks=false]{hyperref}
+
+\cvprfinalcopy 
+\def\cvprPaperID{****}
+\setcounter{page}{1}
+
+%%%%%%%%% DOCUMENT
+\begin{document}
+
+%%%%%%%%% TITLE
+\title{Dense SIFT BoVW Image Classification:\\Function‑level Breakdown and Pipeline Overview}
+
+\author{Anonymous CVPR submission\\Paper ID ****}
+\maketitle
+
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+We dissect an enhanced Bag‑of‑Visual‑Words (BoVW) image‑classification pipeline implemented in \texttt{version3.py}. Instead of reporting empirical results, this report focuses on \textbf{(i)}~the role of each major function, and \textbf{(ii)}~how these functions interoperate to form a coherent training‑to‑inference workflow.
+\end{abstract}
+
+%%%%%%%%% 1. OVERALL PIPELINE
+\section{Pipeline at a Glance}
+The pipeline can be summarised in five sequential stages:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Dense SIFT Extraction}
+  \item \textbf{PCA + KMeans Vocabulary Learning}
+  \item \textbf{BoVW Histogram Encoding}
+  \item \textbf{Feature Standardisation}
+  \item \textbf{Linear SVM Training / Prediction}
+\end{enumerate}
+Each stage corresponds to a dedicated function set in \texttt{version3.py} (Table~\ref{tab:func}).
+
+%%%%%%%%% 2. FUNCTION‑LEVEL DESCRIPTION
+\section{Key Functions}
+\subsection{Feature‑related}
+\begin{description}[leftmargin=*]
+  \item[\texttt{extract\_dense\_sift(img)}] Applies CLAHE, samples keypoints on a \SI{4}{px} grid across four scales, and returns $d=128$‑dimensional SIFT descriptors with $\ell_2$ normalisation.
+  \item[\texttt{build\_vocabulary(training\_dir,\dots)}] Aggregates descriptors from all classes, standardises them, projects to 128‑D PCA space, and learns a \num{1000}‑word MiniBatchKMeans codebook. It outputs the fitted scaler, PCA model, and KMeans object.
+  \item[\texttt{extract\_bow\_features(img, scaler, pca, vocab)}] Converts an arbitrary image into a BoVW histogram by: (1) dense SIFT, (2) PCA projection, (3) FAISS nearest‑centre lookup, (4) $\ell_1$ normalisation.
+\end{description}
+
+\subsection{Data Loading}
+\begin{description}[leftmargin=*]
+  \item[\texttt{load\_training\_data()}] Iterates over labelled folders, calls \texttt{extract\_bow\_features}, and yields a feature matrix $\mathbf{H}_{\text{train}} \in \mathbb{R}^{n\times1000}$ and label vector.
+  \item[\texttt{load\_test\_data()}] Mirrors the above but records file names instead of labels.
+\end{description}
+
+\subsection{Model Training and Evaluation}
+\begin{description}[leftmargin=*]
+  \item[\texttt{train\_svm\_classifier()}] Performs a standardisation pass, prints class distribution, runs a 5‑fold grid search over Linear‑SVM hyper‑parameters, and finally fits the best One‑Vs‑Rest estimator.
+  \item[\texttt{predict\_and\_save()}] Applies the feature scaler, obtains decision values / predictions, prints sanity‑check statistics, and writes ordered results to disk.
+\end{description}
+
+%%%%%%%%% 3. PIPELINE EXECUTION ORDER
+\section{Putting It Together: \texttt{main()}}
+Listing~\ref{lst:mainflow} outlines the chronological invocation order and data objects exchanged between functions.
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Vocabulary Building} — \texttt{build\_vocabulary}
+  \item \textbf{Training Feature Matrix} — \texttt{load\_training\_data}
+  \item \textbf{Classifier Training} — \texttt{train\_svm\_classifier}
+  \item \textbf{Model Serialisation} — via \texttt{pickle}
+  \item \textbf{Test Feature Matrix} — \texttt{load\_test\_data}
+  \item \textbf{Inference} — \texttt{predict\_and\_save}
+\end{enumerate}
+
+\begin{figure}[h]
+\small
+\begin{verbatim}
+scaler, pca, kmeans = build_vocabulary()
+X_train, y = load_training_data(scaler, pca, kmeans)
+clf, feat_scaler   = train_svm_classifier(X_train, y)
+pickle.dump((...), open('model.pkl','wb'))
+X_test, fnames     = load_test_data(scaler, pca, kmeans)
+predict_and_save(clf, feat_scaler, X_test, fnames)
+\end{verbatim}
+\caption{Core control flow (pseudo‑code).}
+\label{lst:mainflow}
+\end{figure}
+
+%%%%%%%%% 4. DISCUSSION
+\section{Design Rationale}
+\textbf{Dense vs. Sparse SIFT.} Dense sampling guarantees uniform coverage, crucial for fine‑grained classes.
+
+\textbf{PCA Before Clustering.} A 128‑D projection preserves most variance while lowering memory and speeding up both KMeans and FAISS search.
+
+\textbf{FAISS Quantisation.} Compared with brute‑force search, FAISS scales to millions of descriptors with negligible loss in assignment accuracy.
+
+\textbf{Linear SVM Choice.} Empirically sufficient for high‑dim BoVW histograms; training remains fast with the \texttt{dual} optimisation mode.
+
+%%%%%%%%% 5. CONCLUSION
+\section{Conclusion}
+Each function in \texttt{version3.py} encapsulates a self‑contained step of the classical BoVW pipeline. Understanding their interfaces clarifies how data flow and hyper‑parameters interact, enabling straightforward modification or replacement (e.g., swapping SIFT for ORB, or Linear‑SVM for logistic regression).
+
+%%%%%%%%% REFERENCES
+{\small
+\bibliographystyle{ieee_fullname}
+\begin{thebibliography}{9}\itemsep=-1pt
+\bibitem{lowe2004} D. Lowe. Distinctive Image Features from Scale‑Invariant Keypoints. \textit{IJCV}, 2004.
+\bibitem{faiss2019} J. Johnson and H. Zhang. Billion‑scale similarity search with GPUs. \textit{IEEE TKDE}, 2019.
+\bibitem{sklearn2011} F. Pedregosa \etal. Scikit‑learn: Machine Learning in Python. \textit{JMLR}, 2011.
+\end{thebibliography}}
+
+\end{document}

@@ -21,10 +21,7 @@ def extract_dense_sift(img, step=4, scales=[1.0, 0.75, 0.5, 0.25]):  # 增加尺
     提取密集SIFT特徵，增強特徵提取
     """
     # 轉換為numpy數組並確保灰度圖
-    if len(np.array(img).shape) == 3:
-        img_array = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
-    else:
-        img_array = np.array(img)
+    img_array = np.array(img)
     
     # 應用CLAHE對比度增強
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
